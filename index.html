@@ -441,10 +441,18 @@ more details about how to do it.</p>
 <div class="section" id="benchmarking-your-own-synthesizer">
 <h2>Benchmarking your own synthesizer<a class="headerlink" href="#benchmarking-your-own-synthesizer" title="Permalink to this headline">¶</a></h2>
 <p>All you need to do in order to use the SDGym Benchmark, is to import and call the <code class="docutils literal notranslate"><span class="pre">sdgym.benchmark</span></code>
-function passing it your synthesizer function:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sdgym</span> <span class="kn">import</span> <span class="n">benchmark</span>
+function passing it your synthesizer function and the settings that you want to use for the
+evaluation.</p>
+<p>For example, if we want to evaluate a simple synthesizer function in the <code class="docutils literal notranslate"><span class="pre">census</span></code> dataset
+we can execute:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sdgym</span> <span class="kn">import</span> <span class="n">benchmark</span>
 
-<span class="n">scores</span> <span class="o">=</span> <span class="n">benchmark</span><span class="p">(</span><span class="n">synthesizers</span><span class="o">=</span><span class="n">my_synthesizer_function</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">my_synthesizer_function</span><span class="p">(</span><span class="n">real_data</span><span class="p">,</span> <span class="n">categorical_columns</span><span class="p">,</span> <span class="n">ordinal_columns</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;dummy synthesizer that just returns a permutation of the real data.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">real_data</span><span class="p">)</span>
+
+<span class="n">scores</span> <span class="o">=</span> <span class="n">benchmark</span><span class="p">(</span><span class="n">synthesizers</span><span class="o">=</span><span class="n">my_synthesizer_function</span><span class="p">,</span> <span class="n">datasets</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;census&#39;</span><span class="p">])</span>
 </pre></div>
 </div>
 <ul class="simple">
@@ -469,7 +477,7 @@ my_synthesizer_function        0.64865  0.210103  ...             -1.964966
 corresponding class, or a list of classes, to the <code class="docutils literal notranslate"><span class="pre">benchmark</span></code> function.</p>
 <p>For example, if you want to run the complete benchmark suite to evaluate all the existing
 synthesizers you can run (this will take a lot of time to run!):</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sdgym.synthesizers</span> <span class="kn">import</span> <span class="p">(</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sdgym.synthesizers</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">CLBNSynthesizer</span><span class="p">,</span> <span class="n">CTGANSynthesizer</span><span class="p">,</span> <span class="n">IdentitySynthesizer</span><span class="p">,</span> <span class="n">IndependentSynthesizer</span><span class="p">,</span>
     <span class="n">MedganSynthesizer</span><span class="p">,</span> <span class="n">PrivBNSynthesizer</span><span class="p">,</span> <span class="n">TableganSynthesizer</span><span class="p">,</span> <span class="n">TVAESynthesizer</span><span class="p">,</span>
     <span class="n">UniformSynthesizer</span><span class="p">,</span> <span class="n">VEEGANSynthesizer</span><span class="p">)</span>
