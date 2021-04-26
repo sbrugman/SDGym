@@ -84,7 +84,7 @@ class FeatureMaker:
         self.label_column = label_column
         self.label_type = label_type
         self.sample = sample
-        self.encoders = dict()
+        self.encoders = {}
 
     def make_features(self, data):
         data = data.copy()
@@ -102,7 +102,7 @@ class FeatureMaker:
                 elif self.label_type == 'float':
                     labels = col.astype(float)
                 else:
-                    assert 0, 'unkown label type'
+                    raise AssertionError('unkown label type')
                 continue
 
             if cinfo['type'] == CONTINUOUS:
