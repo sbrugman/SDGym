@@ -60,50 +60,13 @@ def _used_memory():
     return humanfriendly.format_size(process.memory_info().rss)
 
 
-def _score_synthesizer_on_dataset(name, synthesizer, dataset_name, iteration, cache_dir, focus=None):
+def _score_synthesizer_on_dataset(name, synthesizer, dataset_name, iteration, cache_dir, type_subset=None):
     try:
         LOGGER.info('Evaluating %s on dataset %s; iteration %s; %s', name, dataset_name, iteration, _used_memory())
+        if type_subset is not None:
+            dataset_name += f"_{type_subset}"
 
         train, test, meta, categoricals, ordinals = load_dataset(dataset_name, benchmark=True)
-        if focus is not None:
-            dataset_name += f"_{focus}"
-            if focus == 'numeric':
-                for idx, v in enumerate(meta['columns']):
-                    if v['name'] == 'label':
-                        break
-
-                cat_col = categoricals + ordinals
-                cat_col.remove(idx)
-                train = np.delete(train, cat_col, axis=1)
-                test = np.delete(test, cat_col, axis=1)
-
-                categoricals = []
-                ordinals = []
-
-                for idx in reversed(sorted(cat_col)):
-                    del meta['columns'][idx]
-
-                assert len(meta['columns']) == train.shape[1]
-            elif focus == 'categorical':
-                for idx, v in enumerate(meta['columns']):
-                    if v['name'] == 'label':
-                        break
-
-                num_col = set(range(train.shape[1]))
-                num_col.remove(idx)
-                num_col -= set(categoricals + ordinals)
-                num_col = list(num_col)
-                train = np.delete(train, num_col, axis=1)
-                test = np.delete(test, num_col, axis=1)
-                categoricals = [v - sum([1 for x in num_col if x < v]) for v in categoricals]
-                ordinals = [v - sum([1 for x in num_col if x < v]) for v in ordinals]
-
-                for idx in reversed(sorted(num_col)):
-                    del meta['columns'][idx]
-
-                assert len(meta['columns']) == train.shape[1]
-            else:
-                raise ValueError("numeric or categorical")
 
         if isinstance(synthesizer, type) and issubclass(synthesizer, BaseSynthesizer):
             synthesizer = synthesizer().fit_sample
@@ -323,17 +286,9 @@ def run(synthesizers, datasets=None, iterations=3, add_leaderboard=True,
     scorer_args = list()
     for synthesizer_name, synthesizer in synthesizers.items():
         for dataset_name in datasets or DEFAULT_DATASETS:
-            focus_types = [
-                None
-             ]
-            if dataset_name in MIXED_DATASETS:
-                focus_types.append('numeric')
-                focus_types.append('categorical')
-
-            for focus in focus_types:
-                for iteration in range(iterations):
-                    args = (synthesizer_name, synthesizer, dataset_name, iteration, cache_dir, focus)
-                    scorer_args.append(args)
+            for iteration in range(iterations):
+                args = (synthesizer_name, synthesizer, dataset_name, iteration, cache_dir)
+                scorer_args.append(args)
 
     if workers == 'dask':
         scores = _run_on_dask(scorer_args, show_progress)
