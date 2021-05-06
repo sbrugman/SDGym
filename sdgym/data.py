@@ -3,6 +3,7 @@ import logging
 import os
 import urllib
 
+import pandas as pd
 import numpy as np
 
 from sdgym.constants import CATEGORICAL, ORDINAL
@@ -30,16 +31,32 @@ def _load_file(filename, loader):
     return loader(local_path)
 
 
-def _get_columns(metadata):
-    categorical_columns = list()
-    ordinal_columns = list()
+def _get_columns(metadata, data, distinct_threshold):
+    categorical_columns = []
+    ordinal_columns = []
+    numeric_columns = []
+
+    df = pd.DataFrame(data)
     for column_idx, column in enumerate(metadata['columns']):
-        if column['type'] == CATEGORICAL:
+        counts = df[column_idx].value_counts()
+        distinct = len(counts)
+
+        if column['type'] == CATEGORICAL or (distinct_threshold is not None and distinct < distinct_threshold):
+            if column['type'] != CATEGORICAL:
+                LOGGER.info(
+                    f"'{column['name']}' was converted to CATEGORICAL because number of distinct values "
+                    f"{distinct} was lower than the threshold {distinct_threshold}"
+                )
+                LOGGER.info(
+                    f"Most frequent 10 values: {counts.head(20).index.values.tolist()}"
+                )
             categorical_columns.append(column_idx)
         elif column['type'] == ORDINAL:
             ordinal_columns.append(column_idx)
+        else:
+            numeric_columns.append(column_idx)
 
-    return categorical_columns, ordinal_columns
+    return categorical_columns, ordinal_columns, numeric_columns
 
 
 def numeric_subset(train, test, meta, categorical_columns, ordinal_columns):
@@ -83,28 +100,55 @@ def categorical_subset(train, test, meta, categorical_columns, ordinal_columns):
     return train, test, meta, categorical_columns, ordinal_columns
 
 
-def remove_suffix(s, suffix):
-    return s[:-len(suffix)]
+def parse_name(name):
+    distinct_threshold = -1
+    type_subset = "all"
+    zero_code = 1.
+
+    parts = name.split("_")
+    if parts[-1].startswith("zc"):
+        zero_code = float(parts.pop()[2:])
+
+    if parts[-1].startswith("u"):
+        distinct_threshold = int(parts.pop()[1:])
+
+    if parts[-1] in ["categorical", "numeric"]:
+        type_subset = parts.pop()
+
+    name = "_".join(parts)
+    return name, type_subset, distinct_threshold, zero_code
+
+
+def get_zero_code_columns(data, threshold, num_cols):
+    df = pd.DataFrame(data)
+    cols = []
+    for col in df.columns:
+        if col not in num_cols:
+            continue
+        counts = df[col].value_counts()
+
+        total = counts.sum()
+        x = (counts.head(1).index.values.tolist()[0] == 0.0) and (counts.head(1).sum() / total) > threshold
+        if x:
+            cols.append(col)
+    return cols
 
 
 def load_dataset(name: str, benchmark=False):
-    if name.endswith("_categorical"):
-        type_subset = "categorical"
-        name = remove_suffix(name, "_categorical")
-    elif name.endswith("_numeric"):
-        type_subset = "numeric"
-        name = remove_suffix(name, "_numeric")
-    else:
-        type_subset = "all"
+    name, type_subset, distinct_threshold, zero_code = parse_name(name)
 
-    LOGGER.info('Loading dataset %s (%s variables)', name, type_subset)
+    LOGGER.info('Loading dataset %s (%s variables, %d distinct values threshold)', name, type_subset, distinct_threshold)
     data = _load_file(name + '.npz', np.load)
     meta = _load_file(name + '.json', _load_json)
 
-    categorical_columns, ordinal_columns = _get_columns(meta)
-
     train = data['train']
     test = data['test']
+    full = np.concatenate([train, test])
+
+    categorical_columns, ordinal_columns, numeric_columns = _get_columns(meta, full, distinct_threshold)
+    if zero_code:
+        vars_to_code = get_zero_code_columns(full, zero_code, numeric_columns)
+        LOGGER.info(f"Columns to zero-code: {vars_to_code}")
 
     if type_subset != "all":
         if type_subset == 'numeric':
@@ -118,3 +162,13 @@ def load_dataset(name: str, benchmark=False):
         return train, test, meta, categorical_columns, ordinal_columns
 
     return train, categorical_columns, ordinal_columns
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    load_dataset("census_numeric_u50_zc0.4")
+    load_dataset("census_u50_zc0.4")
+    load_dataset("census_zc0.4")
+    load_dataset("adult_numeric_u50_zc0.4")
+    load_dataset("covtype_numeric_u50_zc0.4")
+    load_dataset("covtype_u50")
