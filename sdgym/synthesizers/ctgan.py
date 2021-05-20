@@ -4,6 +4,7 @@ import torch.optim as optim
 import torch.utils.data
 from torch.nn import BatchNorm1d, Dropout, LeakyReLU, Linear, Module, ReLU, Sequential
 from torch.nn import functional as F
+from tqdm import tqdm
 
 from sdgym.synthesizers.base import BaseSynthesizer
 from sdgym.synthesizers.utils import BGMTransformer
@@ -76,7 +77,7 @@ def apply_activate(data, output_info):
             data_t.append(F.gumbel_softmax(data[:, st:ed], tau=0.2))
             st = ed
         else:
-            assert 0
+            raise ValueError()
     return torch.cat(data_t, dim=1)
 
 
@@ -85,7 +86,7 @@ def random_choice_prob_index(a, axis=1):
     return (a.cumsum(axis=axis) > r).argmax(axis=axis)
 
 
-class Cond(object):
+class Cond:
     def __init__(self, data, output_info):
         # self.n_col = self.n_opt = 0
         # return
@@ -112,7 +113,7 @@ class Cond(object):
                 self.model.append(np.argmax(data[:, st:ed], axis=-1))
                 st = ed
             else:
-                assert 0
+                raise ValueError()
         assert st == data.shape[1]
 
         self.interval = []
@@ -141,13 +142,13 @@ class Cond(object):
                 self.n_col += 1
                 st = ed
             else:
-                assert 0
+                raise ValueError()
         self.interval = np.asarray(self.interval)
 
     def sample(self, batch):
         if self.n_col == 0:
             return None
-        batch = batch
+
         idx = np.random.choice(np.arange(self.n_col), batch)
 
         vec1 = np.zeros((batch, self.n_opt), dtype='float32')
@@ -180,7 +181,6 @@ def cond_loss(data, output_info, c, m):
         if item[1] == 'tanh':
             st += item[0]
             skip = True
-
         elif item[1] == 'softmax':
             if skip:
                 skip = False
@@ -197,15 +197,14 @@ def cond_loss(data, output_info, c, m):
             loss.append(tmp)
             st = ed
             st_c = ed_c
-
         else:
-            assert 0
+            raise ValueError()
     loss = torch.stack(loss, dim=1)
 
     return (loss * m).sum() / data.size()[0]
 
 
-class Sampler(object):
+class Sampler:
     """docstring for Sampler."""
 
     def __init__(self, data, output_info):
@@ -226,22 +225,26 @@ class Sampler(object):
                     st += item[0]
                     continue
                 ed = st + item[0]
-                tmp = []
-                for j in range(item[0]):
-                    tmp.append(np.nonzero(data[:, st + j])[0])
+                tmp = [
+                    np.nonzero(data[:, st + j])[0]
+                    for j in range(item[0])
+                ]
                 self.model.append(tmp)
                 st = ed
             else:
-                assert 0
+                raise ValueError()
         assert st == data.shape[1]
 
     def sample(self, n, col, opt):
         if col is None:
             idx = np.random.choice(np.arange(self.n), n)
             return self.data[idx]
-        idx = []
-        for c, o in zip(col, opt):
-            idx.append(np.random.choice(self.model[c][o]))
+
+        idx = [
+            np.random.choice(self.model[c][o])
+            for c, o in zip(col, opt)
+        ]
+
         return self.data[idx]
 
 
@@ -269,14 +272,15 @@ def calc_gradient_penalty(netD, real_data, fake_data, device='cpu', pac=10, lamb
 class CTGANSynthesizer(BaseSynthesizer):
     """docstring for IdentitySynthesizer."""
 
-    def __init__(self,
-                 embedding_dim=128,
-                 gen_dim=(256, 256),
-                 dis_dim=(256, 256),
-                 l2scale=1e-6,
-                 batch_size=500,
-                 epochs=300):
-
+    def __init__(
+        self,
+        embedding_dim=128,
+        gen_dim=(256, 256),
+        dis_dim=(256, 256),
+        l2scale=1e-6,
+        batch_size=500,
+        epochs=300
+    ):
         self.embedding_dim = embedding_dim
         self.gen_dim = gen_dim
         self.dis_dim = dis_dim
@@ -287,7 +291,6 @@ class CTGANSynthesizer(BaseSynthesizer):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def fit(self, train_data, categorical_columns=tuple(), ordinal_columns=tuple()):
-
         self.transformer = BGMTransformer()
         self.transformer.fit(train_data, categorical_columns, ordinal_columns)
         train_data = self.transformer.transform(train_data)
@@ -300,25 +303,22 @@ class CTGANSynthesizer(BaseSynthesizer):
         self.generator = Generator(
             self.embedding_dim + self.cond_generator.n_opt,
             self.gen_dim,
-            data_dim).to(self.device)
+            data_dim
+        ).to(self.device)
 
-        discriminator = Discriminator(
-            data_dim + self.cond_generator.n_opt,
-            self.dis_dim).to(self.device)
+        discriminator = Discriminator(data_dim + self.cond_generator.n_opt, self.dis_dim).to(self.device)
 
-        optimizerG = optim.Adam(
-            self.generator.parameters(), lr=2e-4, betas=(0.5, 0.9), weight_decay=self.l2scale)
+        optimizerG = optim.Adam(self.generator.parameters(), lr=2e-4, betas=(0.5, 0.9), weight_decay=self.l2scale)
         optimizerD = optim.Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.9))
 
         assert self.batch_size % 2 == 0
-        mean = torch.zeros(self.batch_size, self.embedding_dim, device=self.device)
-        std = mean + 1
 
         steps_per_epoch = len(train_data) // self.batch_size
-        for i in range(self.epochs):
+        for _ in tqdm(range(self.epochs)):
             for id_ in range(steps_per_epoch):
-                fakez = torch.normal(mean=mean, std=std)
-
+                fakez = torch.normal(
+                    mean=0, std=1, size=(self.batch_size, self.embedding_dim), device=self.device
+                )
                 condvec = self.cond_generator.sample(self.batch_size)
                 if condvec is None:
                     c1, m1, col, opt = None, None, None, None
@@ -357,7 +357,9 @@ class CTGANSynthesizer(BaseSynthesizer):
                 loss_d.backward()
                 optimizerD.step()
 
-                fakez = torch.normal(mean=mean, std=std)
+                fakez = torch.normal(
+                    mean=0, std=1, size=(self.batch_size, self.embedding_dim), device=self.device
+                )
                 condvec = self.cond_generator.sample(self.batch_size)
 
                 if condvec is None:
@@ -394,16 +396,13 @@ class CTGANSynthesizer(BaseSynthesizer):
         steps = n // self.batch_size + 1
         data = []
         for i in range(steps):
-            mean = torch.zeros(self.batch_size, self.embedding_dim)
-            std = mean + 1
-            fakez = torch.normal(mean=mean, std=std).to(self.device)
+            fakez = torch.normal(mean=0, std=1, size=(self.batch_size, self.embedding_dim), device=self.device)
 
             condvec = self.cond_generator.sample_zero(self.batch_size)
             if condvec is None:
                 pass
             else:
-                c1 = condvec
-                c1 = torch.from_numpy(c1).to(self.device)
+                c1 = torch.from_numpy(condvec).to(self.device)
                 fakez = torch.cat([fakez, c1], dim=1)
 
             fake = self.generator(fakez)
