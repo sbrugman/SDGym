@@ -10,12 +10,10 @@ from datetime import datetime, timedelta
 import humanfriendly
 import psutil
 import tqdm
-import numpy as np
 
 from sdgym.data import load_dataset
 from sdgym.evaluate import compute_scores
 from sdgym.results import make_leaderboard
-from sdgym.synthesizers.base import BaseSynthesizer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,18 +66,31 @@ def _score_synthesizer_on_dataset(name, synthesizer, dataset_name, iteration, ca
 
         train, test, meta, categoricals, ordinals = load_dataset(dataset_name, benchmark=True)
 
-        if isinstance(synthesizer, type) and issubclass(synthesizer, BaseSynthesizer):
-            synthesizer = synthesizer().fit_sample
+        # if not isinstance(synthesizer, type) or not issubclass(synthesizers, BaseSynthesizer):
+        #     raise ValueError("Please extend the BaseSynthesizer class")
 
         LOGGER.info('Running %s on dataset %s; iteration %s; %s', name, dataset_name, iteration, _used_memory())
 
-        synthesized = synthesizer(train.copy(), categoricals, ordinals)
+        my_synthesizer = synthesizer()
+
+        start = datetime.utcnow()
+        my_synthesizer.fit(train.copy(), categoricals, ordinals)
+        end = datetime.utcnow()
+
+        start_sample = datetime.utcnow()
+        synthesized = my_synthesizer.sample(train.shape[0])
+        end_sample = datetime.utcnow()
 
         LOGGER.info('Scoring %s on dataset %s; iteration %s; %s', name, dataset_name, iteration, _used_memory())
+        metric_start = datetime.utcnow()
         scores = compute_scores(train, test, synthesized, meta)
+        metric_end = datetime.utcnow()
         scores['dataset'] = dataset_name
         scores['iteration'] = iteration
         scores['synthesizer'] = name
+        scores['fit_time'] = (end - start).total_seconds()
+        scores['sample_time'] = (end_sample - start_sample).total_seconds()
+        scores['metric_time'] = (metric_end - metric_start).total_seconds()
 
         if cache_dir:
             csv_name = f'{name}_{dataset_name}_{iteration}.csv'
@@ -221,9 +232,11 @@ def _run_on_dask(scorer_args, verbose):
     return dask.compute(*persisted)
 
 
-def run(synthesizers, datasets=None, iterations=3, add_leaderboard=True,
-        leaderboard_path=None, replace_existing=True, workers=1,
-        cache_dir=None, output_path=None, show_progress=False):
+def run(
+    synthesizers, datasets=None, iterations=3, add_leaderboard=True,
+    leaderboard_path=None, replace_existing=True, workers=1,
+    cache_dir=None, output_path=None, show_progress=False
+):
     """Run the SDGym benchmark and return a leaderboard.
 
     The ``synthesizers`` object can either be a single synthesizer or, an iterable of
@@ -283,12 +296,12 @@ def run(synthesizers, datasets=None, iterations=3, add_leaderboard=True,
     if cache_dir:
         os.makedirs(cache_dir, exist_ok=True)
 
-    scorer_args = list()
-    for synthesizer_name, synthesizer in synthesizers.items():
-        for dataset_name in datasets or DEFAULT_DATASETS:
-            for iteration in range(iterations):
-                args = (synthesizer_name, synthesizer, dataset_name, iteration, cache_dir)
-                scorer_args.append(args)
+    scorer_args = [
+        (synthesizer_name, synthesizer, dataset_name, iteration, cache_dir)
+        for synthesizer_name, synthesizer in synthesizers.items()
+        for dataset_name in datasets or DEFAULT_DATASETS
+        for iteration in range(iterations)
+    ]
 
     if workers == 'dask':
         scores = _run_on_dask(scorer_args, show_progress)
