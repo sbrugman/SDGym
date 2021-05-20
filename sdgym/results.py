@@ -142,12 +142,13 @@ def _dataset_summary(grouped_df):
     return scores
 
 
-def make_leaderboard(scores, add_leaderboard=True, leaderboard_path=None,
-                     replace_existing=True, output_path=None):
+def make_leaderboard(
+    scores, add_leaderboard=True, leaderboard_path=None, replace_existing=True, output_path=None
+):
     """Make a leaderboard out of individual synthesizer scores.
 
     If ``add_leaderboard`` is ``True``, append the obtained scores to the leaderboard
-    stored in the ``lederboard_path``. By default, the leaderboard used is the one which
+    stored in the ``leaderboard_path``. By default, the leaderboard used is the one which
     is included in the package, which contains the scores obtained by the SDGym Synthesizers.
 
     If ``replace_existing`` is ``True`` and any of the given synthesizers already existed

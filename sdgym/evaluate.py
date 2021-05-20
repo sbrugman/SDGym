@@ -198,7 +198,7 @@ def _evaluate_binary_classification(train, test, metadata):
     performance = []
     for model_spec in classifiers:
         model_class = model_spec['class']
-        model_kwargs = model_spec.get('kwargs', dict())
+        model_kwargs = model_spec.get('kwargs', {})
         model_repr = model_class.__name__
         model = model_class(**model_kwargs)
 
@@ -232,7 +232,7 @@ def _evaluate_regression(train, test, metadata):
     y_test = np.log(np.clip(y_test, 1, 20000))
     for model_spec in regressors:
         model_class = model_spec['class']
-        model_kwargs = model_spec.get('kwargs', dict())
+        model_kwargs = model_spec.get('kwargs', {})
         model_repr = model_class.__name__
         model = model_class(**model_kwargs)
 
@@ -253,7 +253,7 @@ def _evaluate_regression(train, test, metadata):
 
 
 def _evaluate_gmm_likelihood(train, test, metadata, components=[10, 30]):
-    results = list()
+    results = []
     for n_components in components:
         gmm = GaussianMixture(n_components, covariance_type='diag')
         LOGGER.info('Evaluating using %s', gmm)
