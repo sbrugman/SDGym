@@ -4,6 +4,7 @@ from torch.nn import Linear, Module, Parameter, ReLU, Sequential
 from torch.nn.functional import cross_entropy
 from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from sdgym.synthesizers.base import BaseSynthesizer
 from sdgym.synthesizers.utils import BGMTransformer
@@ -85,7 +86,6 @@ class TVAESynthesizer(BaseSynthesizer):
         batch_size=500,
         epochs=300
     ):
-
         self.embedding_dim = embedding_dim
         self.compress_dims = compress_dims
         self.decompress_dims = decompress_dims
@@ -111,7 +111,7 @@ class TVAESynthesizer(BaseSynthesizer):
             list(encoder.parameters()) + list(self.decoder.parameters()),
             weight_decay=self.l2scale)
 
-        for i in range(self.epochs):
+        for _ in tqdm(range(self.epochs)):
             for id_, data in enumerate(loader):
                 optimizerAE.zero_grad()
                 real = data[0].to(self.device)
