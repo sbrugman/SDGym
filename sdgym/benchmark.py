@@ -71,7 +71,7 @@ def _score_synthesizer_on_dataset(name, synthesizer, dataset_name, iteration, ca
 
         LOGGER.info('Running %s on dataset %s; iteration %s; %s', name, dataset_name, iteration, _used_memory())
 
-        my_synthesizer = synthesizer()
+        my_synthesizer = synthesizer(iteration)
 
         start = datetime.utcnow()
         my_synthesizer.fit(train.copy(), categoricals, ordinals)
