@@ -7,6 +7,7 @@ from torch.nn import (
 from torch.nn.functional import binary_cross_entropy_with_logits
 from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from sdgym.constants import CATEGORICAL
 from sdgym.synthesizers.base import BaseSynthesizer
@@ -119,13 +120,14 @@ def weights_init(m):
 class TableganSynthesizer(BaseSynthesizer):
     """docstring for TableganSynthesizer??"""
 
-    def __init__(self,
-                 random_dim=100,
-                 num_channels=64,
-                 l2scale=1e-5,
-                 batch_size=500,
-                 epochs=300):
-
+    def __init__(
+        self,
+        random_dim=100,
+        num_channels=64,
+        l2scale=1e-5,
+        batch_size=500,
+        epochs=300
+    ):
         self.random_dim = random_dim
         self.num_channels = num_channels
         self.l2scale = l2scale
@@ -166,7 +168,7 @@ class TableganSynthesizer(BaseSynthesizer):
         discriminator.apply(weights_init)
         classifier.apply(weights_init)
 
-        for i in range(self.epochs):
+        for i in tqdm(range(self.epochs)):
             for id_, data in enumerate(loader):
                 real = data[0].to(self.device)
                 noise = torch.randn(self.batch_size, self.random_dim, 1, 1, device=self.device)
@@ -212,7 +214,7 @@ class TableganSynthesizer(BaseSynthesizer):
                 else:
                     loss_c = None
 
-                if((id_ + 1) % 50 == 0):
+                if (id_ + 1) % 100 == 0:
                     print("epoch", i + 1, "step", id_ + 1, loss_d, loss_g, loss_c)
 
     def sample(self, n):

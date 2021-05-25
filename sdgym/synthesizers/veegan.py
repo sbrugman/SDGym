@@ -4,6 +4,7 @@ from torch.nn import Dropout, Linear, Module, ReLU, Sequential
 from torch.nn.functional import mse_loss, softmax
 from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from sdgym.synthesizers.base import BaseSynthesizer
 from sdgym.synthesizers.utils import GeneralTransformer
@@ -121,7 +122,7 @@ class VEEGANSynthesizer(BaseSynthesizer):
 
         mean = torch.zeros(self.batch_size, self.embedding_dim, device=self.device)
         std = mean + 1
-        for i in range(self.epochs):
+        for i in tqdm(range(self.epochs)):
             for id_, data in enumerate(loader):
                 real = data[0].to(self.device)
                 realz = reconstructor(real)

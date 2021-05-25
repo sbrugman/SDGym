@@ -5,6 +5,7 @@ from torch.nn import BatchNorm1d, Linear, Module, Sequential
 from torch.nn.functional import cross_entropy, mse_loss, sigmoid
 from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from sdgym.synthesizers.base import BaseSynthesizer
 from sdgym.synthesizers.utils import GeneralTransformer
@@ -187,7 +188,7 @@ class MedganSynthesizer(BaseSynthesizer):
 
         mean = torch.zeros(self.batch_size, self.random_dim, device=self.device)
         std = mean + 1
-        for i in range(self.epochs):
+        for i in tqdm(range(self.epochs)):
             n_d = 2
             n_g = 1
             for id_, data in enumerate(loader):
