@@ -191,8 +191,6 @@ def make_leaderboard(
     else:
         leaderboard = leaderboard.droplevel(-1)
 
-    leaderboard['timestamp'] = datetime.utcnow()
-
     if add_leaderboard:
         old_leaderboard = pd.read_csv(
             leaderboard_path or LEADERBOARD_PATH,
