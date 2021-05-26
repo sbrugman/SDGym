@@ -94,7 +94,7 @@ def _score_synthesizer_on_dataset(name, synthesizer, dataset_name, iteration, ca
 
         if cache_dir:
             csv_name = f'{name}_{dataset_name}_{iteration}.csv'
-            scores.to_csv(os.path.join(cache_dir, csv_name))
+            scores.to_csv(os.path.join(cache_dir, csv_name), index=False)
 
         return scores
     except Exception:
@@ -295,6 +295,8 @@ def run(
 
     if cache_dir:
         os.makedirs(cache_dir, exist_ok=True)
+    else:
+        raise ValueError("please set a cache_dir!")
 
     scorer_args = [
         (synthesizer_name, synthesizer, dataset_name, iteration, cache_dir)
