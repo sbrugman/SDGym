@@ -5,6 +5,8 @@ LOGGER = logging.getLogger(__name__)
 
 class BaseSynthesizer:
     """Base class for all default synthesizers of ``SDGym``."""
+    def __init__(self, iterations=0):
+        pass
 
     def fit(self, data, categorical_columns=tuple(), ordinal_columns=tuple()):
         pass
