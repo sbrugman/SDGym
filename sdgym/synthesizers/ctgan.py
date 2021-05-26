@@ -274,6 +274,7 @@ class CTGANSynthesizer(BaseSynthesizer):
 
     def __init__(
         self,
+        iterations=None,
         embedding_dim=128,
         gen_dim=(256, 256),
         dis_dim=(256, 256),

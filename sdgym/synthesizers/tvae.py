@@ -79,6 +79,7 @@ class TVAESynthesizer(BaseSynthesizer):
 
     def __init__(
         self,
+        iterations=None,
         embedding_dim=128,
         compress_dims=(128, 128),
         decompress_dims=(128, 128),

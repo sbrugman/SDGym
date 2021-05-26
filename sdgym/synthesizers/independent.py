@@ -9,7 +9,7 @@ from sdgym.synthesizers.utils import Transformer
 class IndependentSynthesizer(BaseSynthesizer):
     """docstring for IdentitySynthesizer."""
 
-    def __init__(self, gmm_n=5):
+    def __init__(self, iterations=None, gmm_n=5):
         self.gmm_n = gmm_n
 
     def fit(self, data, categorical_columns=tuple(), ordinal_columns=tuple()):

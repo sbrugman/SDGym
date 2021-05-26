@@ -83,6 +83,7 @@ class VEEGANSynthesizer(BaseSynthesizer):
 
     def __init__(
         self,
+        iterations=None,
         embedding_dim=32,
         gen_dim=(128, 128),
         dis_dim=(128, ),

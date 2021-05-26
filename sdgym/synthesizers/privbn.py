@@ -21,7 +21,7 @@ def try_mkdirs(dir):
 class PrivBNSynthesizer(BaseSynthesizer):
     """docstring for IdentitySynthesizer."""
 
-    def __init__(self, theta=20, max_samples=25000):
+    def __init__(self, iterations=None, theta=20, max_samples=25000):
         assert os.path.exists("privbayes/privBayes.bin")
         self.theta = theta
         self.max_samples = max_samples

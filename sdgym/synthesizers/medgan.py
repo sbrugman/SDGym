@@ -123,6 +123,7 @@ class MedganSynthesizer(BaseSynthesizer):
     """docstring for IdentitySynthesizer."""
 
     def __init__(self,
+                 iterations=None,
                  embedding_dim=128,
                  random_dim=128,
                  generator_dims=(128, 128),          # 128 -> 128 -> 128
