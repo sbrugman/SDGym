@@ -4,6 +4,7 @@ import io
 import logging
 import multiprocessing as mp
 import os
+import time
 import types
 from datetime import datetime, timedelta
 
@@ -93,7 +94,8 @@ def _score_synthesizer_on_dataset(name, synthesizer, dataset_name, iteration, ca
         scores['metric_time'] = (metric_end - metric_start).total_seconds()
 
         if cache_dir:
-            csv_name = f'{name}_{dataset_name}_{iteration}.csv'
+            time_str = time.strftime("%Y-%m-%d_%H-%M-%S")
+            csv_name = f'{name}_{dataset_name}_{iteration}_{time_str}.csv'
             scores.to_csv(os.path.join(cache_dir, csv_name), index=False)
 
         return scores
@@ -235,7 +237,8 @@ def _run_on_dask(scorer_args, verbose):
 def run(
     synthesizers, datasets=None, iterations=3, add_leaderboard=True,
     leaderboard_path=None, replace_existing=True, workers=1,
-    cache_dir=None, output_path=None, show_progress=False
+    cache_dir=None, output_path=None, show_progress=False,
+    iteration_start_idx=0,
 ):
     """Run the SDGym benchmark and return a leaderboard.
 
@@ -302,7 +305,7 @@ def run(
         (synthesizer_name, synthesizer, dataset_name, iteration, cache_dir)
         for synthesizer_name, synthesizer in synthesizers.items()
         for dataset_name in datasets or DEFAULT_DATASETS
-        for iteration in range(iterations)
+        for iteration in range(iteration_start_idx, iteration_start_idx + iterations)
     ]
 
     if workers == 'dask':
