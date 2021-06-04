@@ -109,6 +109,6 @@ setup(
     test_suite='tests',
     tests_require=tests_require,
     url='https://github.com/sdv-dev/SDGym',
-    version='0.2.2',
+    version='0.2.2.fork',
     zip_safe=False,
 )
